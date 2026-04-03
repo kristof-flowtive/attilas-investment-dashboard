@@ -551,8 +551,19 @@ function renderCharts(a, b) {
     }
   };
 
-  // Option A chart
-  const aLabels = ['Start', ...a.rows.map(r => r.month)];
+  // Helper: get next month label from a "MMM YYYY" string
+  function nextMonth(label) {
+    const [mon, yr] = label.split(' ');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const idx = months.indexOf(mon);
+    if (idx === 11) return 'Jan ' + (parseInt(yr) + 1);
+    return months[idx + 1] + ' ' + yr;
+  }
+
+  // Option A chart — start label is initial capital, then each month shows resulting balance
+  const aLabels = a.rows.length > 0
+    ? [a.rows[0].month, ...a.rows.map(r => nextMonth(r.month))]
+    : ['Mar 2026'];
   const aData = [OPTION_A.initialCapital, ...a.rows.map(r => r.balance)];
 
   new Chart(document.getElementById('chartA'), {
@@ -573,7 +584,9 @@ function renderCharts(a, b) {
   });
 
   // Option B chart
-  const bLabels = ['Start', ...b.rows.map(r => r.month)];
+  const bLabels = b.rows.length > 0
+    ? [b.rows[0].month, ...b.rows.map(r => nextMonth(r.month))]
+    : ['Mar 2026'];
   const bData = [OPTION_B.initialCapital, ...b.rows.map(r => r.balance)];
 
   new Chart(document.getElementById('chartB'), {
@@ -595,7 +608,8 @@ function renderCharts(a, b) {
 
   // Combined chart
   const allMonths = [...new Set([...a.rows.map(r => r.month), ...b.rows.map(r => r.month)])];
-  const combinedLabels = ['Start', ...allMonths];
+  const firstMonth = allMonths.length > 0 ? allMonths[0] : 'Mar 2026';
+  const combinedLabels = [firstMonth, ...allMonths.map(m => nextMonth(m))];
 
   // Build combined running totals
   let runA = OPTION_A.initialCapital;
