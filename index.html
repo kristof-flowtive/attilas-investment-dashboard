@@ -339,6 +339,7 @@ const OPTION_A = {
   // Coupon is auto-calculated at 2.2%. Just record months and payout choice.
   months: [
     { month: "Mar 2026", action: "Reinvested" },
+    { month: "Apr 2026", action: "Reinvested" },
   ]
 };
 
@@ -348,6 +349,7 @@ const OPTION_B = {
   // returnPct is the % return for that month (e.g. 5.3 or -2.1)
   months: [
     { month: "Mar 2026", returnPct: 7.2 },
+    { month: "Apr 2026", returnPct: 5.4 },
   ]
 };
 
@@ -412,7 +414,7 @@ function buildOptionB() {
 
 function render() {
   // Date
-  document.getElementById('currentDate').textContent = 'April 2026';
+  document.getElementById('currentDate').textContent = 'May 2026';
 
   const a = buildOptionA();
   const b = buildOptionB();
