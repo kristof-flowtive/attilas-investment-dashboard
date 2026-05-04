@@ -343,7 +343,7 @@ const OPTION_A = {
   // A month can be deposit-only (omit action) — no coupon applied that month.
   months: [
     { month: "Mar 2026", action: "Reinvested" },
-    { month: "Apr 2026", deposit: 1_500_000 },
+    { month: "Apr 2026", deposit: 1_640_400, action: "Reinvested" },
     { month: "May 2026", action: "Reinvested" },
   ]
 };
@@ -355,7 +355,7 @@ const OPTION_B = {
   // Omit returnPct for a deposit-only month.
   months: [
     { month: "Mar 2026", returnPct: 7.2 },
-    { month: "Apr 2026", deposit: 500_000 },
+    { month: "Apr 2026", deposit: 500_000, returnPct: 5.4 },
     { month: "May 2026", returnPct: 5.4 },
   ]
 };
