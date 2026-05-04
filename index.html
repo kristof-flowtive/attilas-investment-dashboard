@@ -353,8 +353,8 @@ const OPTION_B = {
   // Deposits are added to balance at the start of the month (before return).
   // Omit returnPct for a deposit-only month.
   months: [
+    { month: "Mar 2026", returnPct: 7.2 },
     { month: "Apr 2026", deposit: 500_000, returnPct: 5.4 },
-    { month: "May 2026", returnPct: 5.4 },
   ]
 };
 
@@ -612,11 +612,11 @@ function renderCharts(a, b) {
     options: chartOpts
   });
 
-  // Option B chart — trims the trailing "next month" label
+  // Option B chart
   const bLabels = b.rows.length > 0
-    ? [b.rows[0].month, ...b.rows.slice(0, -1).map(r => nextMonth(r.month))]
+    ? [b.rows[0].month, ...b.rows.map(r => nextMonth(r.month))]
     : ['Mar 2026'];
-  const bData = [OPTION_B.initialCapital, ...b.rows.slice(0, -1).map(r => r.balance)];
+  const bData = [OPTION_B.initialCapital, ...b.rows.map(r => r.balance)];
 
   new Chart(document.getElementById('chartB'), {
     type: 'line',
