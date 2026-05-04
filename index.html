@@ -275,6 +275,7 @@
           <thead>
             <tr>
               <th>Month</th>
+              <th>Deposit</th>
               <th>Coupon Rate</th>
               <th>Coupon (HUF)</th>
               <th>Action</th>
@@ -305,6 +306,7 @@
           <thead>
             <tr>
               <th>Month</th>
+              <th>Deposit</th>
               <th>Return %</th>
               <th>P&L (HUF)</th>
               <th>Balance</th>
@@ -335,21 +337,26 @@
 const OPTION_A = {
   initialCapital: 1_800_000,
   fixedCouponRate: 2.2, // % per month
-  // Each entry: { month: "MMM YYYY", action: "Paid Out" | "Reinvested" }
-  // Coupon is auto-calculated at 2.2%. Just record months and payout choice.
+  // Each entry: { month: "MMM YYYY", action?: "Paid Out" | "Reinvested", deposit?: number }
+  // Coupon is auto-calculated at 2.2% on current balance when an action is set.
+  // Deposits are added to balance at the start of the month (before coupon).
+  // A month can be deposit-only (omit action) — no coupon applied that month.
   months: [
     { month: "Mar 2026", action: "Reinvested" },
-    { month: "Apr 2026", action: "Reinvested" },
+    { month: "Apr 2026", deposit: 1_500_000 },
+    { month: "May 2026", action: "Reinvested" },
   ]
 };
 
 const OPTION_B = {
   initialCapital: 500_000,
-  // Each entry: { month: "MMM YYYY", returnPct: number }
-  // returnPct is the % return for that month (e.g. 5.3 or -2.1)
+  // Each entry: { month: "MMM YYYY", returnPct?: number, deposit?: number }
+  // Deposits are added to balance at the start of the month (before return).
+  // Omit returnPct for a deposit-only month.
   months: [
     { month: "Mar 2026", returnPct: 7.2 },
-    { month: "Apr 2026", returnPct: 5.4 },
+    { month: "Apr 2026", deposit: 500_000 },
+    { month: "May 2026", returnPct: 5.4 },
   ]
 };
 
@@ -371,45 +378,63 @@ function buildOptionA() {
   const rows = [];
   let balance = OPTION_A.initialCapital;
   let totalCoupons = 0;
+  let totalDeposits = 0;
 
   for (const m of OPTION_A.months) {
-    const coupon = balance * (OPTION_A.fixedCouponRate / 100);
-    totalCoupons += coupon;
-    if (m.action === 'Reinvested') {
-      balance += coupon;
+    const deposit = m.deposit || 0;
+    if (deposit) {
+      balance += deposit;
+      totalDeposits += deposit;
+    }
+    let coupon = 0;
+    if (m.action) {
+      coupon = balance * (OPTION_A.fixedCouponRate / 100);
+      totalCoupons += coupon;
+      if (m.action === 'Reinvested') balance += coupon;
     }
     rows.push({
       month: m.month,
-      couponRate: OPTION_A.fixedCouponRate,
+      deposit,
+      couponRate: m.action ? OPTION_A.fixedCouponRate : null,
       coupon,
-      action: m.action,
+      action: m.action || null,
       balance
     });
   }
 
-  return { rows, balance, totalCoupons };
+  return { rows, balance, totalCoupons, totalDeposits };
 }
 
 // Build Option B ledger
 function buildOptionB() {
   const rows = [];
   let balance = OPTION_B.initialCapital;
-  let totalReturn = 0;
+  let totalDeposits = 0;
 
   for (const m of OPTION_B.months) {
-    const pnl = balance * (m.returnPct / 100);
-    balance += pnl;
-    totalReturn += m.returnPct;
+    const deposit = m.deposit || 0;
+    if (deposit) {
+      balance += deposit;
+      totalDeposits += deposit;
+    }
+    let pnl = 0;
+    const hasReturn = typeof m.returnPct === 'number';
+    if (hasReturn) {
+      pnl = balance * (m.returnPct / 100);
+      balance += pnl;
+    }
     rows.push({
       month: m.month,
-      returnPct: m.returnPct,
+      deposit,
+      returnPct: hasReturn ? m.returnPct : null,
       pnl,
       balance
     });
   }
 
-  const overallPct = ((balance - OPTION_B.initialCapital) / OPTION_B.initialCapital) * 100;
-  return { rows, balance, overallPct };
+  const totalInvested = OPTION_B.initialCapital + totalDeposits;
+  const overallPct = totalInvested > 0 ? ((balance - totalInvested) / totalInvested) * 100 : 0;
+  return { rows, balance, overallPct, totalDeposits };
 }
 
 function render() {
@@ -418,7 +443,7 @@ function render() {
 
   const a = buildOptionA();
   const b = buildOptionB();
-  const totalInvested = OPTION_A.initialCapital + OPTION_B.initialCapital;
+  const totalInvested = OPTION_A.initialCapital + OPTION_B.initialCapital + a.totalDeposits + b.totalDeposits;
   const totalCurrent = a.balance + b.balance;
   const totalPnl = totalCurrent - totalInvested;
   const totalPct = (totalPnl / totalInvested) * 100;
@@ -445,10 +470,11 @@ function render() {
   `;
 
   // Option A details
+  const aInvested = OPTION_A.initialCapital + a.totalDeposits;
   document.getElementById('optionADetails').innerHTML = `
     <div class="detail-card">
-      <div class="detail-label">Initial Capital</div>
-      <div class="detail-value">${formatHUF(OPTION_A.initialCapital)}</div>
+      <div class="detail-label">Total Invested</div>
+      <div class="detail-value">${formatHUF(aInvested)}</div>
     </div>
     <div class="detail-card">
       <div class="detail-label">Monthly Coupon</div>
@@ -467,25 +493,27 @@ function render() {
   // Option A table
   const tableA = document.getElementById('tableA');
   if (a.rows.length === 0) {
-    tableA.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#555;padding:20px;">No monthly data yet</td></tr>';
+    tableA.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#555;padding:20px;">No monthly data yet</td></tr>';
   } else {
     tableA.innerHTML = a.rows.map(r => `
       <tr>
         <td>${r.month}</td>
-        <td class="accent-a">${r.couponRate.toFixed(1)}%</td>
-        <td class="positive">+${formatHUF(r.coupon)}</td>
-        <td>${r.action}</td>
+        <td class="${r.deposit ? 'positive' : 'neutral'}">${r.deposit ? '+' + formatHUF(r.deposit) : '—'}</td>
+        <td class="${r.couponRate !== null ? 'accent-a' : 'neutral'}">${r.couponRate !== null ? r.couponRate.toFixed(1) + '%' : '—'}</td>
+        <td class="${r.coupon ? 'positive' : 'neutral'}">${r.coupon ? '+' + formatHUF(r.coupon) : '—'}</td>
+        <td>${r.action || '—'}</td>
         <td>${formatHUF(r.balance)}</td>
       </tr>
     `).join('');
   }
 
   // Option B details
-  const bPnl = b.balance - OPTION_B.initialCapital;
+  const bInvested = OPTION_B.initialCapital + b.totalDeposits;
+  const bPnl = b.balance - bInvested;
   document.getElementById('optionBDetails').innerHTML = `
     <div class="detail-card">
-      <div class="detail-label">Initial Capital</div>
-      <div class="detail-value">${formatHUF(OPTION_B.initialCapital)}</div>
+      <div class="detail-label">Total Invested</div>
+      <div class="detail-value">${formatHUF(bInvested)}</div>
     </div>
     <div class="detail-card">
       <div class="detail-label">Current Balance</div>
@@ -504,13 +532,14 @@ function render() {
   // Option B table
   const tableB = document.getElementById('tableB');
   if (b.rows.length === 0) {
-    tableB.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#555;padding:20px;">No monthly data yet</td></tr>';
+    tableB.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#555;padding:20px;">No monthly data yet</td></tr>';
   } else {
     tableB.innerHTML = b.rows.map(r => `
       <tr>
         <td>${r.month}</td>
-        <td class="${r.returnPct >= 0 ? 'positive' : 'negative'}">${pct(r.returnPct)}</td>
-        <td class="${r.pnl >= 0 ? 'positive' : 'negative'}">${r.pnl >= 0 ? '+' : ''}${formatHUF(r.pnl)}</td>
+        <td class="${r.deposit ? 'positive' : 'neutral'}">${r.deposit ? '+' + formatHUF(r.deposit) : '—'}</td>
+        <td class="${r.returnPct === null ? 'neutral' : (r.returnPct >= 0 ? 'positive' : 'negative')}">${r.returnPct === null ? '—' : pct(r.returnPct)}</td>
+        <td class="${r.returnPct === null ? 'neutral' : (r.pnl >= 0 ? 'positive' : 'negative')}">${r.returnPct === null ? '—' : (r.pnl >= 0 ? '+' : '') + formatHUF(r.pnl)}</td>
         <td>${formatHUF(r.balance)}</td>
       </tr>
     `).join('');
