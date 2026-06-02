@@ -338,6 +338,8 @@ const FUND_A = {
   // Each entry: { month: "MMM YYYY", action: "Paid Out" | "Reinvested" }
   // Coupon is auto-calculated at 2.5%. Just record months and payout choice.
   months: [
+    { month: "May 2025", action: "Reinvested" },
+    { month: "Jun 2025", action: "Reinvested" },
     { month: "Jul 2025", action: "Reinvested" },
     { month: "Aug 2025", action: "Reinvested" },
     { month: "Sep 2025", action: "Reinvested" },
@@ -347,23 +349,29 @@ const FUND_A = {
     { month: "Jan 2026", action: "Reinvested" },
     { month: "Feb 2026", action: "Reinvested" },
     { month: "Mar 2026", action: "Reinvested" },
+    { month: "Apr 2026", action: "Reinvested" },
+    { month: "May 2026", action: "Reinvested" },
   ]
 };
 
 const FUND_B = {
   initialCapital: 6_000,
-  // Each entry: { month: "MMM YYYY", returnPct: number }
-  // returnPct is the % return for that month (e.g. 5.3 or -2.1)
+  // Each entry: { month: "MMM YYYY", gain: number }
+  // gain is the £ gain for that month (positive or negative)
   months: [
-    { month: "Jul 2025", returnPct: 7.2 },
-    { month: "Aug 2025", returnPct: 5.0 },
-    { month: "Sep 2025", returnPct: 6.0 },
-    { month: "Oct 2025", returnPct: -1.8 },
-    { month: "Nov 2025", returnPct: 6.0 },
-    { month: "Dec 2025", returnPct: 4.0 },
-    { month: "Jan 2026", returnPct: 5.5 },
-    { month: "Feb 2026", returnPct: 6.5 },
-    { month: "Mar 2026", returnPct: 3.1 },
+    { month: "May 2025", gain: 672 },
+    { month: "Jun 2025", gain: 642 },
+    { month: "Jul 2025", gain: 220 },
+    { month: "Aug 2025", gain: 297 },
+    { month: "Sep 2025", gain: 341 },
+    { month: "Oct 2025", gain: 217 },
+    { month: "Nov 2025", gain: 312 },
+    { month: "Dec 2025", gain: 0 },
+    { month: "Jan 2026", gain: 148 },
+    { month: "Feb 2026", gain: 274 },
+    { month: "Mar 2026", gain: 0 },
+    { month: "Apr 2026", gain: 219 },
+    { month: "May 2026", gain: 117 },
   ]
 };
 
@@ -408,15 +416,14 @@ function buildFundA() {
 function buildFundB() {
   const rows = [];
   let balance = FUND_B.initialCapital;
-  let totalReturn = 0;
 
   for (const m of FUND_B.months) {
-    const pnl = balance * (m.returnPct / 100);
+    const pnl = m.gain;
+    const returnPct = balance > 0 ? (pnl / balance) * 100 : 0;
     balance += pnl;
-    totalReturn += m.returnPct;
     rows.push({
       month: m.month,
-      returnPct: m.returnPct,
+      returnPct,
       pnl,
       balance
     });
@@ -428,7 +435,7 @@ function buildFundB() {
 
 function render() {
   // Date
-  document.getElementById('currentDate').textContent = 'April 2026';
+  document.getElementById('currentDate').textContent = 'June 2026';
 
   const a = buildFundA();
   const b = buildFundB();
@@ -579,7 +586,7 @@ function renderCharts(a, b) {
   // Fund A chart
   const aLabels = a.rows.length > 0
     ? [a.rows[0].month, ...a.rows.map(r => nextMonth(r.month))]
-    : ['Jul 2025'];
+    : ['May 2025'];
   const aData = [FUND_A.initialCapital, ...a.rows.map(r => r.balance)];
 
   new Chart(document.getElementById('chartA'), {
@@ -602,7 +609,7 @@ function renderCharts(a, b) {
   // Fund B chart
   const bLabels = b.rows.length > 0
     ? [b.rows[0].month, ...b.rows.map(r => nextMonth(r.month))]
-    : ['Jul 2025'];
+    : ['May 2025'];
   const bData = [FUND_B.initialCapital, ...b.rows.map(r => r.balance)];
 
   new Chart(document.getElementById('chartB'), {
@@ -624,7 +631,7 @@ function renderCharts(a, b) {
 
   // Combined chart
   const allMonths = [...new Set([...a.rows.map(r => r.month), ...b.rows.map(r => r.month)])];
-  const firstMonth = allMonths.length > 0 ? allMonths[0] : 'Jul 2025';
+  const firstMonth = allMonths.length > 0 ? allMonths[0] : 'May 2025';
   const combinedLabels = [firstMonth, ...allMonths.map(m => nextMonth(m))];
 
   let runA = FUND_A.initialCapital;
