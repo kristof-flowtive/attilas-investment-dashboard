@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attila's Investment Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #161822;
+      border-bottom: 1px solid #2a2d3a;
+      padding: 20px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-content {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-content h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .header-content h1 span {
+      color: #6c63ff;
+    }
+
+    .header-date {
+      font-size: 0.85rem;
+      color: #888;
+    }
+
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* Summary cards */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: #161822;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .card-label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .card-sub {
+      font-size: 0.82rem;
+      margin-top: 4px;
+    }
+
+    .positive { color: #4ade80; }
+    .negative { color: #f87171; }
+    .neutral  { color: #888; }
+    .accent-a { color: #6c63ff; }
+    .accent-b { color: #f59e0b; }
+
+    /* Fund sections */
+    .fund-section {
+      margin-bottom: 36px;
+    }
+
+    .fund-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .fund-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-a {
+      background: rgba(108, 99, 255, 0.15);
+      color: #6c63ff;
+    }
+
+    .badge-b {
+      background: rgba(245, 158, 11, 0.15);
+      color: #f59e0b;
+    }
+
+    .fund-header h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .fund-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .detail-card {
+      background: #1c1f2e;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .detail-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .detail-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* Chart */
+    .chart-container {
+      background: #161822;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .chart-container h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #ccc;
+      margin-bottom: 16px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      height: 280px;
+    }
+
+    /* Table */
+    .table-container {
+      background: #161822;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .table-container h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #ccc;
+      padding: 16px 20px 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #666;
+      padding: 8px 16px;
+      border-bottom: 1px solid #2a2d3a;
+    }
+
+    tbody td {
+      padding: 10px 16px;
+      font-size: 0.88rem;
+      border-bottom: 1px solid #1e2130;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: #1c1f2e;
+    }
+
+    .disclaimer {
+      margin-top: 40px;
+      padding: 16px 20px;
+      background: #161822;
+      border: 1px solid #2a2d3a;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+      .fund-details { grid-template-columns: 1fr 1fr; }
+      .card-value { font-size: 1.3rem; }
+      .chart-wrap { height: 220px; }
+      table { font-size: 0.8rem; }
+      thead th, tbody td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-content">
+    <h1><span>&#9670;</span> Attila's Investment Dashboard</h1>
+    <div class="header-date" id="currentDate"></div>
+  </div>
+</header>
+
+<main>
+  <!-- Summary Cards -->
+  <div class="summary-grid" id="summaryCards"></div>
+
+  <!-- Option A Section -->
+  <section class="fund-section">
+    <div class="fund-header">
+      <span class="fund-badge badge-a">Option A</span>
+      <h2>Capital Protected Fixed Coupon</h2>
+    </div>
+    <div class="fund-details" id="optionADetails"></div>
+    <div class="chart-container">
+      <h3>Portfolio Value Over Time</h3>
+      <div class="chart-wrap"><canvas id="chartA"></canvas></div>
+    </div>
+    <div class="table-container">
+      <h3>Monthly Returns</h3>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Deposit</th>
+              <th>Coupon Rate</th>
+              <th>Coupon (HUF)</th>
+              <th>Action</th>
+              <th>Balance</th>
+            </tr>
+          </thead>
+          <tbody id="tableA"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Option B Section -->
+  <section class="fund-section">
+    <div class="fund-header">
+      <span class="fund-badge badge-b">Option B</span>
+      <h2>Variable High-Risk Strategy</h2>
+    </div>
+    <div class="fund-details" id="optionBDetails"></div>
+    <div class="chart-container">
+      <h3>Portfolio Value Over Time</h3>
+      <div class="chart-wrap"><canvas id="chartB"></canvas></div>
+    </div>
+    <div class="table-container">
+      <h3>Monthly Returns</h3>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Deposit</th>
+              <th>Return %</th>
+              <th>P&L (HUF)</th>
+              <th>Balance</th>
+            </tr>
+          </thead>
+          <tbody id="tableB"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Combined Chart -->
+  <div class="chart-container">
+    <h3>Combined Portfolio Value</h3>
+    <div class="chart-wrap"><canvas id="chartCombined"></canvas></div>
+  </div>
+
+  <div class="disclaimer">
+    <strong>Disclaimer:</strong> This dashboard is for informational purposes only. Option A capital is protected per the terms of the investment agreement. Option B carries full market risk including potential partial or total capital loss. Past performance does not guarantee future results.
+  </div>
+</main>
+
+<script>
+// ============================================================
+// DATA — loaded from Supabase (tables: dashboards, funds, monthly_entries)
+// To record a new month, insert a row into monthly_entries and
+// update dashboards.header_date. The page reads it on next load.
+// ============================================================
+
+const SUPABASE_URL = 'https://kjcjrvjghozpbzwkkmzi.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqY2pydmpnaG96cGJ6d2trbXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MDA4MjIsImV4cCI6MjA5OTM3NjgyMn0.qMpEmegqmts8cIeTtOwyZIheW2IVM7asYnzlX8S8cxg';
+const DASHBOARD_SLUG = 'attila';
+
+let OPTION_A = { initialCapital: 0, fixedCouponRate: 0, months: [] };
+let OPTION_B = { initialCapital: 0, months: [] };
+let HEADER_DATE = '';
+
+// "2026-03-01" -> "Mar 2026"
+function monthLabel(isoDate) {
+  const [y, m] = isoDate.split('-').map(Number);
+  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return names[m - 1] + ' ' + y;
+}
+
+async function loadData() {
+  const query = 'slug=eq.' + DASHBOARD_SLUG +
+    '&select=header_date,funds(code,initial_capital,fixed_coupon_rate,monthly_entries(month,action,deposit,return_pct))';
+  const res = await fetch(SUPABASE_URL + '/rest/v1/dashboards?' + query, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  });
+  if (!res.ok) throw new Error('Supabase request failed: HTTP ' + res.status);
+  const dashboard = (await res.json())[0];
+  if (!dashboard) throw new Error('Dashboard "' + DASHBOARD_SLUG + '" not found');
+
+  HEADER_DATE = dashboard.header_date || '';
+  for (const fund of dashboard.funds) {
+    const entries = [...fund.monthly_entries].sort((x, y) => x.month.localeCompare(y.month));
+    if (fund.code === 'A') {
+      OPTION_A = {
+        initialCapital: fund.initial_capital,
+        fixedCouponRate: fund.fixed_coupon_rate,
+        months: entries.map(e => ({
+          month: monthLabel(e.month),
+          action: e.action || undefined,
+          deposit: e.deposit || undefined
+        }))
+      };
+    } else if (fund.code === 'B') {
+      OPTION_B = {
+        initialCapital: fund.initial_capital,
+        months: entries.map(e => ({
+          month: monthLabel(e.month),
+          returnPct: e.return_pct === null ? undefined : e.return_pct,
+          deposit: e.deposit || undefined
+        }))
+      };
+    }
+  }
+}
+
+// ============================================================
+// Dashboard logic — no need to edit below
+// ============================================================
+
+function formatHUF(n) {
+  return new Intl.NumberFormat('hu-HU').format(Math.round(n)) + ' Ft';
+}
+
+function pct(n) {
+  const sign = n >= 0 ? '+' : '';
+  return sign + n.toFixed(2) + '%';
+}
+
+// Build Option A ledger
+function buildOptionA() {
+  const rows = [];
+  let balance = OPTION_A.initialCapital;
+  let totalCoupons = 0;
+  let totalDeposits = 0;
+
+  for (const m of OPTION_A.months) {
+    const deposit = m.deposit || 0;
+    if (deposit) {
+      balance += deposit;
+      totalDeposits += deposit;
+    }
+    let coupon = 0;
+    if (m.action) {
+      coupon = balance * (OPTION_A.fixedCouponRate / 100);
+      totalCoupons += coupon;
+      if (m.action === 'Reinvested') balance += coupon;
+    }
+    rows.push({
+      month: m.month,
+      deposit,
+      couponRate: m.action ? OPTION_A.fixedCouponRate : null,
+      coupon,
+      action: m.action || null,
+      balance
+    });
+  }
+
+  return { rows, balance, totalCoupons, totalDeposits };
+}
+
+// Build Option B ledger
+function buildOptionB() {
+  const rows = [];
+  let balance = OPTION_B.initialCapital;
+  let totalDeposits = 0;
+
+  for (const m of OPTION_B.months) {
+    const deposit = m.deposit || 0;
+    if (deposit) {
+      balance += deposit;
+      totalDeposits += deposit;
+    }
+    let pnl = 0;
+    const hasReturn = typeof m.returnPct === 'number';
+    if (hasReturn) {
+      pnl = balance * (m.returnPct / 100);
+      balance += pnl;
+    }
+    rows.push({
+      month: m.month,
+      deposit,
+      returnPct: hasReturn ? m.returnPct : null,
+      pnl,
+      balance
+    });
+  }
+
+  const totalInvested = OPTION_B.initialCapital + totalDeposits;
+  const overallPct = totalInvested > 0 ? ((balance - totalInvested) / totalInvested) * 100 : 0;
+  return { rows, balance, overallPct, totalDeposits };
+}
+
+function render() {
+  // Date
+  document.getElementById('currentDate').textContent = HEADER_DATE;
+
+  const a = buildOptionA();
+  const b = buildOptionB();
+  const totalInvested = OPTION_A.initialCapital + OPTION_B.initialCapital + a.totalDeposits + b.totalDeposits;
+  const totalCurrent = a.balance + b.balance;
+  const totalPnl = totalCurrent - totalInvested;
+  const totalPct = (totalPnl / totalInvested) * 100;
+
+  // Summary cards
+  document.getElementById('summaryCards').innerHTML = `
+    <div class="card">
+      <div class="card-label">Total Invested</div>
+      <div class="card-value">${formatHUF(totalInvested)}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Current Value</div>
+      <div class="card-value">${formatHUF(totalCurrent)}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Total P&L</div>
+      <div class="card-value ${totalPnl >= 0 ? 'positive' : 'negative'}">${formatHUF(totalPnl)}</div>
+      <div class="card-sub ${totalPnl >= 0 ? 'positive' : 'negative'}">${pct(totalPct)}</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Option A Coupons Earned</div>
+      <div class="card-value positive">${formatHUF(a.totalCoupons)}</div>
+    </div>
+  `;
+
+  // Option A details
+  const aInvested = OPTION_A.initialCapital + a.totalDeposits;
+  document.getElementById('optionADetails').innerHTML = `
+    <div class="detail-card">
+      <div class="detail-label">Total Invested</div>
+      <div class="detail-value">${formatHUF(aInvested)}</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Monthly Coupon</div>
+      <div class="detail-value accent-a">${OPTION_A.fixedCouponRate}%</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Current Balance</div>
+      <div class="detail-value">${formatHUF(a.balance)}</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Capital Protection</div>
+      <div class="detail-value positive">&#10003; Guaranteed</div>
+    </div>
+  `;
+
+  // Option A table
+  const tableA = document.getElementById('tableA');
+  if (a.rows.length === 0) {
+    tableA.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#555;padding:20px;">No monthly data yet</td></tr>';
+  } else {
+    tableA.innerHTML = a.rows.map(r => `
+      <tr>
+        <td>${r.month}</td>
+        <td class="${r.deposit ? 'positive' : 'neutral'}">${r.deposit ? '+' + formatHUF(r.deposit) : '—'}</td>
+        <td class="${r.couponRate !== null ? 'accent-a' : 'neutral'}">${r.couponRate !== null ? r.couponRate.toFixed(1) + '%' : '—'}</td>
+        <td class="${r.coupon ? 'positive' : 'neutral'}">${r.coupon ? '+' + formatHUF(r.coupon) : '—'}</td>
+        <td>${r.action || '—'}</td>
+        <td>${formatHUF(r.balance)}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Option B details
+  const bInvested = OPTION_B.initialCapital + b.totalDeposits;
+  const bPnl = b.balance - bInvested;
+  document.getElementById('optionBDetails').innerHTML = `
+    <div class="detail-card">
+      <div class="detail-label">Total Invested</div>
+      <div class="detail-value">${formatHUF(bInvested)}</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Current Balance</div>
+      <div class="detail-value">${formatHUF(b.balance)}</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Total Return</div>
+      <div class="detail-value ${bPnl >= 0 ? 'positive' : 'negative'}">${pct(b.overallPct)}</div>
+    </div>
+    <div class="detail-card">
+      <div class="detail-label">Risk Level</div>
+      <div class="detail-value accent-b">High Risk</div>
+    </div>
+  `;
+
+  // Option B table
+  const tableB = document.getElementById('tableB');
+  if (b.rows.length === 0) {
+    tableB.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#555;padding:20px;">No monthly data yet</td></tr>';
+  } else {
+    tableB.innerHTML = b.rows.map(r => `
+      <tr>
+        <td>${r.month}</td>
+        <td class="${r.deposit ? 'positive' : 'neutral'}">${r.deposit ? '+' + formatHUF(r.deposit) : '—'}</td>
+        <td class="${r.returnPct === null ? 'neutral' : (r.returnPct >= 0 ? 'positive' : 'negative')}">${r.returnPct === null ? '—' : pct(r.returnPct)}</td>
+        <td class="${r.returnPct === null ? 'neutral' : (r.pnl >= 0 ? 'positive' : 'negative')}">${r.returnPct === null ? '—' : (r.pnl >= 0 ? '+' : '') + formatHUF(r.pnl)}</td>
+        <td>${formatHUF(r.balance)}</td>
+      </tr>
+    `).join('');
+  }
+
+  // Charts
+  renderCharts(a, b);
+}
+
+function renderCharts(a, b) {
+  const chartOpts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1c1f2e',
+        titleColor: '#fff',
+        bodyColor: '#ccc',
+        borderColor: '#2a2d3a',
+        borderWidth: 1,
+        callbacks: {
+          label: ctx => formatHUF(ctx.parsed.y)
+        }
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#555', font: { size: 11 } },
+        grid: { color: '#1e2130' }
+      },
+      y: {
+        ticks: {
+          color: '#555',
+          font: { size: 11 },
+          callback: v => (v / 1_000_000).toFixed(1) + 'M'
+        },
+        grid: { color: '#1e2130' }
+      }
+    }
+  };
+
+  // Helper: get next month label from a "MMM YYYY" string
+  function nextMonth(label) {
+    const [mon, yr] = label.split(' ');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const idx = months.indexOf(mon);
+    if (idx === 11) return 'Jan ' + (parseInt(yr) + 1);
+    return months[idx + 1] + ' ' + yr;
+  }
+
+  // Option A chart — start label is initial capital, then each month shows resulting balance
+  const aLabels = a.rows.length > 0
+    ? [a.rows[0].month, ...a.rows.map(r => nextMonth(r.month))]
+    : ['Mar 2026'];
+  const aData = [OPTION_A.initialCapital, ...a.rows.map(r => r.balance)];
+
+  new Chart(document.getElementById('chartA'), {
+    type: 'line',
+    data: {
+      labels: aLabels,
+      datasets: [{
+        data: aData,
+        borderColor: '#6c63ff',
+        backgroundColor: 'rgba(108,99,255,0.08)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#6c63ff'
+      }]
+    },
+    options: chartOpts
+  });
+
+  // Option B chart
+  const bLabels = b.rows.length > 0
+    ? [b.rows[0].month, ...b.rows.map(r => nextMonth(r.month))]
+    : ['Mar 2026'];
+  const bData = [OPTION_B.initialCapital, ...b.rows.map(r => r.balance)];
+
+  new Chart(document.getElementById('chartB'), {
+    type: 'line',
+    data: {
+      labels: bLabels,
+      datasets: [{
+        data: bData,
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245,158,11,0.08)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#f59e0b'
+      }]
+    },
+    options: chartOpts
+  });
+
+  // Combined chart
+  const allMonths = [...new Set([...a.rows.map(r => r.month), ...b.rows.map(r => r.month)])];
+  const firstMonth = allMonths.length > 0 ? allMonths[0] : 'Mar 2026';
+  const combinedLabels = [firstMonth, ...allMonths.map(m => nextMonth(m))];
+
+  // Build combined running totals
+  let runA = OPTION_A.initialCapital;
+  let runB = OPTION_B.initialCapital;
+  const aMap = Object.fromEntries(a.rows.map(r => [r.month, r.balance]));
+  const bMap = Object.fromEntries(b.rows.map(r => [r.month, r.balance]));
+
+  const combinedData = [runA + runB];
+  for (const m of allMonths) {
+    if (aMap[m] !== undefined) runA = aMap[m];
+    if (bMap[m] !== undefined) runB = bMap[m];
+    combinedData.push(runA + runB);
+  }
+
+  const combinedOpts = JSON.parse(JSON.stringify(chartOpts));
+  combinedOpts.plugins.legend = {
+    display: true,
+    labels: { color: '#888', font: { size: 11 } }
+  };
+
+  new Chart(document.getElementById('chartCombined'), {
+    type: 'line',
+    data: {
+      labels: combinedLabels,
+      datasets: [
+        {
+          label: 'Combined',
+          data: combinedData,
+          borderColor: '#4ade80',
+          backgroundColor: 'rgba(74,222,128,0.06)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#4ade80'
+        }
+      ]
+    },
+    options: combinedOpts
+  });
+}
+
+document.getElementById('currentDate').textContent = 'Loading…';
+loadData().then(render).catch(err => {
+  console.error(err);
+  document.getElementById('currentDate').textContent = 'Failed to load data — ' + err.message;
+});
+</script>
+</body>
+</html>
