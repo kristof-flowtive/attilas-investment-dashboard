@@ -3,11 +3,11 @@
 ## Overview
 Static investment dashboards (single-file HTML, Chart.js 4.x, no build tools) that load their data from Supabase at page load. Two dashboards:
 
-- `index.html` — Attila, HUF (Hungarian Forint). Served at the site root: https://kristof-flowtive.github.io/attilas-investment-dashboard/
-- `heather-dashboard.html` — Heather, GBP: https://kristof-flowtive.github.io/attilas-investment-dashboard/heather-dashboard.html
-- `attila-dashboard.html` — just a redirect stub to the root (the old URL); not a dashboard
+- **Attila** — `index.html` in this repo (`kristof-flowtive/attilas-investment-dashboard`), HUF. Live at https://kristof-flowtive.github.io/attilas-investment-dashboard/
+- **Heather** — `index.html` in the separate `kristof-flowtive/heather-dashboard` repo, GBP. Live at https://kristof-flowtive.github.io/heather-dashboard/ — its source is NOT in this folder; clone that repo (e.g. to the scratchpad) to change her HTML.
+- `attila-dashboard.html` and `heather-dashboard.html` in this repo are redirect stubs to the URLs above (old links), not dashboards.
 
-Hosted on GitHub Pages from the `master` branch — HTML/CSS changes require a commit + push to go live, but monthly data updates do not (they live in Supabase).
+Both sites are GitHub Pages serving the `master` branch — HTML/CSS changes require a commit + push to the right repo, but monthly data updates do not (they live in Supabase).
 
 ## Data Layer — Supabase (source of truth)
 Project **investment-dashboard**, ref `kjcjrvjghozpbzwkkmzi`, URL `https://kjcjrvjghozpbzwkkmzi.supabase.co`. Schema lives in `supabase/migrations/20260711000000_investment_dashboards.sql`. Tables (RLS: public read-only via anon key; writes need the Management API or dashboard):
