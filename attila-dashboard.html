@@ -331,34 +331,61 @@
 
 <script>
 // ============================================================
-// EDIT MONTHLY DATA HERE
+// DATA — loaded from Supabase (tables: dashboards, funds, monthly_entries)
+// To record a new month, insert a row into monthly_entries and
+// update dashboards.header_date. The page reads it on next load.
 // ============================================================
 
-const OPTION_A = {
-  initialCapital: 1_800_000,
-  fixedCouponRate: 2.2, // % per month
-  // Each entry: { month: "MMM YYYY", action?: "Paid Out" | "Reinvested", deposit?: number }
-  // Coupon is auto-calculated at 2.2% on current balance when an action is set.
-  // Deposits are added to balance at the start of the month (before coupon).
-  // A month can be deposit-only (omit action) — no coupon applied that month.
-  months: [
-    { month: "Mar 2026", action: "Reinvested" },
-    { month: "Apr 2026", deposit: 1_680_000, action: "Reinvested" },
-    { month: "May 2026", action: "Reinvested" },
-  ]
-};
+const SUPABASE_URL = 'https://kjcjrvjghozpbzwkkmzi.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqY2pydmpnaG96cGJ6d2trbXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MDA4MjIsImV4cCI6MjA5OTM3NjgyMn0.qMpEmegqmts8cIeTtOwyZIheW2IVM7asYnzlX8S8cxg';
+const DASHBOARD_SLUG = 'attila';
 
-const OPTION_B = {
-  initialCapital: 500_000,
-  // Each entry: { month: "MMM YYYY", returnPct?: number, deposit?: number }
-  // Deposits are added to balance at the start of the month (before return).
-  // Omit returnPct for a deposit-only month.
-  months: [
-    { month: "Mar 2026", returnPct: 7.2 },
-    { month: "Apr 2026", deposit: 500_000, returnPct: 5.4 },
-    { month: "May 2026", deposit: 300_000, returnPct: 1.2 },
-  ]
-};
+let OPTION_A = { initialCapital: 0, fixedCouponRate: 0, months: [] };
+let OPTION_B = { initialCapital: 0, months: [] };
+let HEADER_DATE = '';
+
+// "2026-03-01" -> "Mar 2026"
+function monthLabel(isoDate) {
+  const [y, m] = isoDate.split('-').map(Number);
+  const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return names[m - 1] + ' ' + y;
+}
+
+async function loadData() {
+  const query = 'slug=eq.' + DASHBOARD_SLUG +
+    '&select=header_date,funds(code,initial_capital,fixed_coupon_rate,monthly_entries(month,action,deposit,return_pct))';
+  const res = await fetch(SUPABASE_URL + '/rest/v1/dashboards?' + query, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  });
+  if (!res.ok) throw new Error('Supabase request failed: HTTP ' + res.status);
+  const dashboard = (await res.json())[0];
+  if (!dashboard) throw new Error('Dashboard "' + DASHBOARD_SLUG + '" not found');
+
+  HEADER_DATE = dashboard.header_date || '';
+  for (const fund of dashboard.funds) {
+    const entries = [...fund.monthly_entries].sort((x, y) => x.month.localeCompare(y.month));
+    if (fund.code === 'A') {
+      OPTION_A = {
+        initialCapital: fund.initial_capital,
+        fixedCouponRate: fund.fixed_coupon_rate,
+        months: entries.map(e => ({
+          month: monthLabel(e.month),
+          action: e.action || undefined,
+          deposit: e.deposit || undefined
+        }))
+      };
+    } else if (fund.code === 'B') {
+      OPTION_B = {
+        initialCapital: fund.initial_capital,
+        months: entries.map(e => ({
+          month: monthLabel(e.month),
+          returnPct: e.return_pct === null ? undefined : e.return_pct,
+          deposit: e.deposit || undefined
+        }))
+      };
+    }
+  }
+}
 
 // ============================================================
 // Dashboard logic — no need to edit below
@@ -439,7 +466,7 @@ function buildOptionB() {
 
 function render() {
   // Date
-  document.getElementById('currentDate').textContent = 'May 2026';
+  document.getElementById('currentDate').textContent = HEADER_DATE;
 
   const a = buildOptionA();
   const b = buildOptionB();
@@ -682,7 +709,11 @@ function renderCharts(a, b) {
   });
 }
 
-render();
+document.getElementById('currentDate').textContent = 'Loading…';
+loadData().then(render).catch(err => {
+  console.error(err);
+  document.getElementById('currentDate').textContent = 'Failed to load data — ' + err.message;
+});
 </script>
 </body>
 </html>
